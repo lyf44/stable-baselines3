@@ -50,6 +50,12 @@ class DummyVecEnv(VecEnv):
             self._save_obs(env_idx, obs)
         return (self._obs_from_buf(), np.copy(self.buf_rews), np.copy(self.buf_dones), deepcopy(self.buf_infos))
 
+    def get_cur_state(self):
+        for env_idx in range(self.num_envs):
+            obs  = self.envs[env_idx].get_cur_state()
+            self._save_obs(env_idx, obs)
+        return self._obs_from_buf()
+
     def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
         seeds = list()
         for idx, env in enumerate(self.envs):

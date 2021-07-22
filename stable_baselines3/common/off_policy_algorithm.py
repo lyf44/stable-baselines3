@@ -502,7 +502,8 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             infos,
         )
 
-        self._last_obs = new_obs
+        # self._last_obs = new_obs
+
         # Save the unnormalized observation
         if self._vec_normalize_env is not None:
             self._last_original_obs = new_obs_
@@ -582,6 +583,12 @@ class OffPolicyAlgorithm(BaseAlgorithm):
 
                 # Store data in replay buffer (normalized action and unnormalized observation)
                 self._store_transition(replay_buffer, buffer_action, new_obs, reward, done, infos)
+
+                ## YF: update actual last_obs
+                if not done[0]:
+                    self._last_obs = env.get_cur_state()
+                else:
+                    self._last_obs = new_obs
 
                 self._update_current_progress_remaining(self.num_timesteps, self._total_timesteps)
 
