@@ -146,6 +146,9 @@ class HerReplayBuffer(DictReplayBuffer):
             key: np.zeros((self.max_episode_stored, self.max_episode_length, *dim), dtype=np.float32)
             for key, dim in input_shape.items()
         }
+        occ_grid_size = 10000
+        self._occ_grid_buffer = np.zeros((self.max_episode_stored, 1, 100, 100))
+
         # Store info dicts are it can be used to compute the reward (e.g. continuity cost)
         self.info_buffer = [deque(maxlen=self.max_episode_length) for _ in range(self.max_episode_stored)]
         # episode length storage, needed for episodes which has less steps than the maximum length
@@ -334,6 +337,7 @@ class HerReplayBuffer(DictReplayBuffer):
 
         # get selected transitions
         transitions = {key: self._buffer[key][episode_indices, transitions_indices].copy() for key in self._buffer.keys()}
+        # transitions['occ'] = self._occ_grid_buffer[episode_indices].copy()
 
         # sample new desired goals and relabel the transitions
         new_goals = self.sample_goals(episode_indices, her_indices, transitions_indices)
@@ -379,8 +383,9 @@ class HerReplayBuffer(DictReplayBuffer):
 
         if online_sampling:
             next_obs = {key: self.to_torch(next_observations[key][:, 0, :]) for key in self._observation_keys}
-
+            next_obs['occ'] = self.to_torch(self._occ_grid_buffer[episode_indices])
             normalized_obs = {key: self.to_torch(observations[key][:, 0, :]) for key in self._observation_keys}
+            normalized_obs['occ'] = self.to_torch(self._occ_grid_buffer[episode_indices])
 
             return DictReplayBufferSamples(
                 observations=normalized_obs,
@@ -421,6 +426,7 @@ class HerReplayBuffer(DictReplayBuffer):
         self._buffer["next_obs"][self.pos][self.current_idx] = next_obs["observation"]
         self._buffer["next_achieved_goal"][self.pos][self.current_idx] = next_obs["achieved_goal"]
         self._buffer["next_desired_goal"][self.pos][self.current_idx] = next_obs["desired_goal"]
+        self._occ_grid_buffer[self.pos] = obs["occ"]
 
         # When doing offline sampling
         # Add real transition to normal replay buffer
