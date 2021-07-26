@@ -3,6 +3,7 @@ import pathlib
 import time
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
+import copy
 
 import gym
 import numpy as np
@@ -502,7 +503,8 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             infos,
         )
 
-        # self._last_obs = new_obs
+        # YF
+        self._last_obs = new_obs
 
         # Save the unnormalized observation
         if self._vec_normalize_env is not None:
@@ -554,6 +556,9 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             done = False
             episode_reward, episode_timesteps = 0.0, 0
 
+            # YF store the start state from the first env.reset()
+            start_state = self._last_obs
+
             while not done:
 
                 if self.use_sde and self.sde_sample_freq > 0 and num_collected_steps % self.sde_sample_freq == 0:
@@ -566,29 +571,11 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                 # Rescale and perform action
                 new_obs, reward, done, infos = env.step(action)
 
-                self.num_timesteps += 1
-                episode_timesteps += 1
-                num_collected_steps += 1
-
                 # Give access to local variables
                 callback.update_locals(locals())
                 # Only stop training if return value is False, not when it is None.
                 if callback.on_step() is False:
                     return RolloutReturn(0.0, num_collected_steps, num_collected_episodes, continue_training=False)
-
-                episode_reward += reward
-
-                # Retrieve reward and episode length if using Monitor wrapper
-                self._update_info_buffer(infos, done)
-
-                # Store data in replay buffer (normalized action and unnormalized observation)
-                self._store_transition(replay_buffer, buffer_action, new_obs, reward, done, infos)
-
-                ## YF: update actual last_obs
-                if not done[0]:
-                    self._last_obs = env.get_cur_state()
-                else:
-                    self._last_obs = new_obs
 
                 self._update_current_progress_remaining(self.num_timesteps, self._total_timesteps)
 
@@ -598,10 +585,40 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                 # see https://github.com/hill-a/stable-baselines/issues/900
                 self._on_step()
 
-                if not should_collect_more_steps(train_freq, num_collected_steps, num_collected_episodes):
-                    break
+                ## YF: update actual last_obs
+                if not done[0]:
+                    self._last_obs = env.get_cur_state()
+                else:
+                    self._last_obs = new_obs
 
-            if done:
+            last_obs_holder = self._last_obs
+            trajectories = env.get_trajectories()
+            for traj in trajectories:
+                self._last_obs = start_state
+                for transition in traj:
+                    new_obs, action, reward, done, info = transition
+                    if new_obs['observation'].ndim < 2:
+                        for key, value in new_obs.items():
+                            new_obs[key] = np.expand_dims(value, axis = 0)
+                    buffer_action = self.policy.scale_action(action)
+                    buffer_action = np.expand_dims(buffer_action, axis = 0)
+                    reward = np.expand_dims(reward, axis = 0)
+                    done = np.expand_dims(done, axis = 0)
+                    infos = [info]
+
+                    self.num_timesteps += 1
+                    episode_timesteps += 1
+                    num_collected_steps += 1
+
+                    episode_reward += reward
+
+                    # Retrieve reward and episode length if using Monitor wrapper
+                    self._update_info_buffer(infos, done)
+
+                    # Store data in replay buffer (normalized action and unnormalized observation)
+                    self._store_transition(replay_buffer, buffer_action, new_obs, reward, done, infos)
+
+            # if done:
                 num_collected_episodes += 1
                 self._episode_num += 1
                 episode_rewards.append(episode_reward)
@@ -614,7 +631,13 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                 if log_interval is not None and self._episode_num % log_interval == 0:
                     self._dump_logs()
 
-        mean_reward = np.mean(episode_rewards) if num_collected_episodes > 0 else 0.0
+                mean_reward = np.mean(episode_rewards) if num_collected_episodes > 0 else 0.0
+
+            # YF restore
+            self._last_obs = last_obs_holder
+
+            if not should_collect_more_steps(train_freq, num_collected_steps, num_collected_episodes):
+                break
 
         callback.on_rollout_end()
 

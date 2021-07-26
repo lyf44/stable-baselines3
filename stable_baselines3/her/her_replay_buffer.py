@@ -462,6 +462,11 @@ class HerReplayBuffer(DictReplayBuffer):
         Increment episode counter
         and reset transition pointer.
         """
+
+        # YF sanity check
+        for i in range(self.current_idx - 1):
+            assert np.allclose(self._buffer["next_obs"][self.pos][i][0], self._buffer["observation"][self.pos][i + 1][0])
+
         # add episode length to length storage
         self.episode_lengths[self.pos] = self.current_idx
 

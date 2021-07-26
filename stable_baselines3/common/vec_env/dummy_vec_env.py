@@ -46,15 +46,21 @@ class DummyVecEnv(VecEnv):
             if self.buf_dones[env_idx]:
                 # save final observation where user can get it, then reset
                 self.buf_infos[env_idx]["terminal_observation"] = obs
+                self.trajectories = self.envs[env_idx].get_trajectories()
                 obs = self.envs[env_idx].reset()
             self._save_obs(env_idx, obs)
         return (self._obs_from_buf(), np.copy(self.buf_rews), np.copy(self.buf_dones), deepcopy(self.buf_infos))
 
+    # YF
     def get_cur_state(self):
         for env_idx in range(self.num_envs):
             obs  = self.envs[env_idx].get_cur_state()
             self._save_obs(env_idx, obs)
         return self._obs_from_buf()
+
+    # YF
+    def get_trajectories(self):
+        return self.trajectories
 
     def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
         seeds = list()
