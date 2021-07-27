@@ -579,6 +579,9 @@ class OffPolicyAlgorithm(BaseAlgorithm):
 
                 self._update_current_progress_remaining(self.num_timesteps, self._total_timesteps)
 
+                # Retrieve reward and episode length if using Monitor wrapper
+                self._update_info_buffer(infos, done)
+
                 # For DQN, check if the target network should be updated
                 # and update the exploration schedule
                 # For SAC/TD3, the update is done as the same time as the gradient update
@@ -612,8 +615,8 @@ class OffPolicyAlgorithm(BaseAlgorithm):
 
                     episode_reward += reward
 
-                    # Retrieve reward and episode length if using Monitor wrapper
-                    self._update_info_buffer(infos, done)
+                    # # Retrieve reward and episode length if using Monitor wrapper
+                    # self._update_info_buffer(infos, done)
 
                     # Store data in replay buffer (normalized action and unnormalized observation)
                     self._store_transition(replay_buffer, buffer_action, new_obs, reward, done, infos)
