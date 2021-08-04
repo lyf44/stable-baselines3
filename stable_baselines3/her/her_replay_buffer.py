@@ -426,7 +426,7 @@ class HerReplayBuffer(DictReplayBuffer):
         self._buffer["next_obs"][self.pos][self.current_idx] = next_obs["observation"]
         self._buffer["next_achieved_goal"][self.pos][self.current_idx] = next_obs["achieved_goal"]
         self._buffer["next_desired_goal"][self.pos][self.current_idx] = next_obs["desired_goal"]
-        self._occ_grid_buffer[self.pos] = obs["occ"]
+        self._occ_grid_buffer[self.pos] = obs["occ"] # YF
 
         # When doing offline sampling
         # Add real transition to normal replay buffer
@@ -446,6 +446,9 @@ class HerReplayBuffer(DictReplayBuffer):
         self.current_idx += 1
 
         self.episode_steps += 1
+
+        if done and infos[0]['is_success']:
+            print("HER: reaching goal happens!!!")
 
         if done or self.episode_steps >= self.max_episode_length:
             self.store_episode()
