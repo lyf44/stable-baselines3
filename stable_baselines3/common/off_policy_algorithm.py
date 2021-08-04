@@ -626,6 +626,8 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                 self._episode_num += 1
                 episode_rewards.append(episode_reward)
                 total_timesteps.append(episode_timesteps)
+                episode_reward = 0.0
+                episode_timesteps = 0
 
                 if action_noise is not None:
                     action_noise.reset()
