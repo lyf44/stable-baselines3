@@ -235,9 +235,13 @@ class SAC(OffPolicyAlgorithm):
                 target_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * next_q_values
 
                 for i in range(replay_data.rewards.shape[0]):
-                    if replay_data.dones[i] and replay_data.rewards[i] == 10:
+                    if replay_data.dones[i] and replay_data.rewards[i][0] == 1:
+                        # print(replay_data.observations['observation'][i])
+                        # print(replay_data.observations['desired_goal'][i])
+                        # print(replay_data.actions[i])
+                        # print(replay_data.next_observations['observation'][i])
+                        # print(replay_data.next_observations['desired_goal'][i])
                         print("SAC: sampling goal happens!!")
-
 
             # Get current Q-values estimates for each critic network
             # using action from the replay buffer
