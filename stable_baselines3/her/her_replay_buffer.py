@@ -448,7 +448,7 @@ class HerReplayBuffer(DictReplayBuffer):
         self.episode_steps += 1
 
         if done and infos[0]['is_success']:
-            print("HER: reaching goal happens!!!")
+            print("HER: reaching goal stored!!!")
 
         if done or self.episode_steps >= self.max_episode_length:
             self.store_episode()
