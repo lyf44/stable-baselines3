@@ -543,6 +543,10 @@ class DictReplayBuffer(ReplayBuffer):
                     f"replay buffer {total_memory_usage:.2f}GB > {mem_available:.2f}GB"
                 )
 
+        self.goal_trans = set()
+        self.col_trans = set()
+        self.free_trans = set()
+
     def add(
         self,
         obs: Dict[str, np.ndarray],
@@ -563,6 +567,18 @@ class DictReplayBuffer(ReplayBuffer):
         self.rewards[self.pos] = np.array(reward).copy()
         self.dones[self.pos] = np.array(done).copy()
 
+        # split into col, free and goal
+        if self.full:
+            self.goal_trans.discard(self.pos)
+            self.col_trans.discard(self.pos)
+            self.free_trans.discard(self.pos)
+        if infos[0]['is_success']:
+            self.goal_trans.add(self.pos)
+        elif infos[0]['collision']:
+            self.col_trans.add(self.pos)
+        else:
+            self.free_trans.add(self.pos)
+
         if self.handle_timeout_termination:
             self.timeouts[self.pos] = np.array([info.get("TimeLimit.truncated", False) for info in infos])
 
@@ -580,7 +596,30 @@ class DictReplayBuffer(ReplayBuffer):
             to normalize the observations/rewards when sampling
         :return:
         """
-        return super(ReplayBuffer, self).sample(batch_size=batch_size, env=env)
+        # return super(ReplayBuffer, self).sample(batch_size=batch_size, env=env)
+        # upper_bound = self.buffer_size if self.full else self.pos
+        # batch_inds = np.random.randint(0, upper_bound, size=batch_size)
+
+        free_num = batch_size // 3
+        col_num = batch_size // 3
+        goal_num = batch_size - col_num - free_num
+
+        goal_trans = np.array(list(self.goal_trans))
+        free_trans = np.array(list(self.free_trans))
+        col_trans = np.array(list(self.col_trans))
+        goal_inds = np.random.choice(goal_trans, size = goal_num)
+        free_inds = np.random.choice(free_trans, size = free_num)
+        col_inds = np.random.choice(col_trans, size = col_num)
+        batch_inds = np.concatenate((goal_inds, free_inds, col_inds), axis = 0)
+
+        for i in goal_inds:
+            assert self.rewards[i] == 10
+        for i in free_inds:
+            assert self.rewards[i] == -0.01
+        for i in col_inds:
+            assert self.rewards[i] == -0.5
+
+        return self._get_samples(batch_inds, env=env)
 
     def _get_samples(self, batch_inds: np.ndarray, env: Optional[VecNormalize] = None) -> DictReplayBufferSamples:
 
