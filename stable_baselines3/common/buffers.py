@@ -600,17 +600,24 @@ class DictReplayBuffer(ReplayBuffer):
         # upper_bound = self.buffer_size if self.full else self.pos
         # batch_inds = np.random.randint(0, upper_bound, size=batch_size)
 
-        free_num = batch_size // 3
-        col_num = batch_size // 3
-        goal_num = batch_size - col_num - free_num
-
-        goal_trans = np.array(list(self.goal_trans))
+        # goal_trans = np.array(list(self.goal_trans))
+        goal_trans = np.array([])
         free_trans = np.array(list(self.free_trans))
         col_trans = np.array(list(self.col_trans))
+
+        if len(goal_trans) > 0:
+            free_num = batch_size // 3
+            col_num = batch_size // 3
+            goal_num = batch_size - col_num - free_num
+        else:
+            free_num = batch_size // 3
+            col_num = batch_size - free_num
+            goal_num = 0
+
         goal_inds = np.random.choice(goal_trans, size = goal_num)
         free_inds = np.random.choice(free_trans, size = free_num)
         col_inds = np.random.choice(col_trans, size = col_num)
-        batch_inds = np.concatenate((goal_inds, free_inds, col_inds), axis = 0)
+        batch_inds = np.concatenate((goal_inds, free_inds, col_inds), axis = 0).astype(np.int)
 
         for i in goal_inds:
             assert self.rewards[i] == 10
