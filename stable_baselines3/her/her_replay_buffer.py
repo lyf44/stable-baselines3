@@ -146,8 +146,8 @@ class HerReplayBuffer(DictReplayBuffer):
             key: np.zeros((self.max_episode_stored, self.max_episode_length, *dim), dtype=np.float32)
             for key, dim in input_shape.items()
         }
-        occ_grid_size = 10000
-        self._occ_grid_buffer = np.zeros((self.max_episode_stored, 1, 100, 100))
+        occ_grid_size = 100
+        self._occ_grid_buffer = np.zeros((self.max_episode_stored, 1, 10, 10))
 
         # Store info dicts are it can be used to compute the reward (e.g. continuity cost)
         self.info_buffer = [deque(maxlen=self.max_episode_length) for _ in range(self.max_episode_stored)]
